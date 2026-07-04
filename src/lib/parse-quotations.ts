@@ -1,6 +1,19 @@
 import * as XLSX from "xlsx";
 
-export type QuotationStatus = "Won" | "Active" | "Lost" | "Unknown";
+// Free-form status label preserved from the source file (title-cased).
+// Common values are "Won", "Active", "Lost", but any distinct status
+// found in the sheet (e.g. "Cancelled", "Pending") is kept as-is.
+export type QuotationStatus = string;
+
+export function isWon(s: string) {
+  return s.trim().toLowerCase().startsWith("won");
+}
+export function isActive(s: string) {
+  return s.trim().toLowerCase().startsWith("active");
+}
+export function isLost(s: string) {
+  return s.trim().toLowerCase().startsWith("lost");
+}
 
 export interface QuotationRow {
   id: string;
@@ -81,11 +94,18 @@ function str(v: unknown): string {
 }
 
 function normStatus(v: unknown): QuotationStatus {
-  const s = str(v).toLowerCase();
-  if (s.startsWith("won")) return "Won";
-  if (s.startsWith("active")) return "Active";
-  if (s.startsWith("lost")) return "Lost";
-  return "Unknown";
+  const raw = str(v);
+  if (!raw) return "Unknown";
+  const lower = raw.toLowerCase();
+  if (lower.startsWith("won")) return "Won";
+  if (lower.startsWith("active")) return "Active";
+  if (lower.startsWith("lost")) return "Lost";
+  // Preserve any other status label (e.g. "Cancelled", "Pending", "On Hold")
+  // with light title-casing so the UI shows a consistent form.
+  return raw
+    .split(/\s+/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(" ");
 }
 
 function normProb(v: unknown): number {

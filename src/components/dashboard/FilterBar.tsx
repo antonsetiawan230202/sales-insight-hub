@@ -89,14 +89,13 @@ function MultiSelect({
   );
 }
 
-const STATUSES: QuotationStatus[] = ["Won", "Active", "Lost"];
-
 export function FilterBar() {
   const { quotations, filters, setFilters, resetFilters } = useDashboardStore();
 
   const opts = useMemo(() => {
     return {
       salesmen: unique(quotations.map((r) => r.salesman).filter(Boolean)).sort(),
+      statuses: unique(quotations.map((r) => r.status).filter(Boolean)).sort(),
       businessAreas: unique(quotations.map((r) => r.businessArea).filter(Boolean)).sort(),
       brands: unique(quotations.map((r) => r.brand).filter(Boolean)).sort(),
       workTypes: unique(quotations.map((r) => r.workType).filter(Boolean)).sort(),
@@ -123,7 +122,7 @@ export function FilterBar() {
         />
         <MultiSelect
           label="Status"
-          options={STATUSES}
+          options={opts.statuses}
           value={filters.statuses}
           onChange={(v) => setFilters({ statuses: v as QuotationStatus[] })}
         />

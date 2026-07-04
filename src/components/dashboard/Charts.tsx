@@ -134,8 +134,11 @@ export function StatusDonut({ rows }: { rows: QuotationRow[] }) {
               outerRadius={85}
               paddingAngle={2}
             >
-              {data.map((d) => (
-                <Cell key={d.name} fill={STATUS_COLORS[d.name] ?? "var(--muted)"} />
+              {data.map((d, i) => (
+                <Cell
+                  key={d.name}
+                  fill={STATUS_COLORS[d.name] ?? CHART_PALETTE[i % CHART_PALETTE.length]}
+                />
               ))}
             </Pie>
             <Tooltip
@@ -166,16 +169,25 @@ export function StatusDonut({ rows }: { rows: QuotationRow[] }) {
 
 export function SalesmanBar({ rows }: { rows: QuotationRow[] }) {
   const [mode, setMode] = useState<"count" | "value">("value");
-  const data = useMemo(() => {
-    const g: Record<string, { Won: number; Active: number; Lost: number; Unknown: number }> = {};
+  const { data, statuses } = useMemo(() => {
+    const statusSet = new Set<string>();
+    for (const r of rows) statusSet.add(r.status || "Unknown");
+    const statuses = Array.from(statusSet).sort();
+    const g: Record<string, Record<string, number> & { total: number }> = {};
     for (const r of rows) {
       const key = r.salesman || "(none)";
-      g[key] ??= { Won: 0, Active: 0, Lost: 0, Unknown: 0 };
-      g[key][r.status] += mode === "count" ? 1 : r.idr;
+      if (!g[key]) {
+        g[key] = { total: 0 } as Record<string, number> & { total: number };
+        for (const s of statuses) g[key][s] = 0;
+      }
+      const inc = mode === "count" ? 1 : r.idr;
+      g[key][r.status || "Unknown"] += inc;
+      g[key].total += inc;
     }
-    return Object.entries(g)
-      .map(([name, v]) => ({ name, ...v, total: v.Won + v.Active + v.Lost + v.Unknown }))
-      .sort((a, b) => b.total - a.total);
+    const data = Object.entries(g)
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => (b.total as number) - (a.total as number));
+    return { data, statuses };
   }, [rows, mode]);
 
   return (
@@ -217,9 +229,14 @@ export function SalesmanBar({ rows }: { rows: QuotationRow[] }) {
             formatter={(val: number) => (mode === "value" ? fmtIdr(val) : fmtInt(val))}
           />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar dataKey="Won" stackId="s" fill={STATUS_COLORS.Won} radius={[0, 0, 0, 0]} />
-          <Bar dataKey="Active" stackId="s" fill={STATUS_COLORS.Active} />
-          <Bar dataKey="Lost" stackId="s" fill={STATUS_COLORS.Lost} />
+          {statuses.map((s, i) => (
+            <Bar
+              key={s}
+              dataKey={s}
+              stackId="s"
+              fill={STATUS_COLORS[s] ?? CHART_PALETTE[i % CHART_PALETTE.length]}
+            />
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>
