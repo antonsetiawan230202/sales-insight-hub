@@ -134,8 +134,11 @@ export function StatusDonut({ rows }: { rows: QuotationRow[] }) {
               outerRadius={85}
               paddingAngle={2}
             >
-              {data.map((d) => (
-                <Cell key={d.name} fill={STATUS_COLORS[d.name] ?? "var(--muted)"} />
+              {data.map((d, i) => (
+                <Cell
+                  key={d.name}
+                  fill={STATUS_COLORS[d.name] ?? CHART_PALETTE[i % CHART_PALETTE.length]}
+                />
               ))}
             </Pie>
             <Tooltip
