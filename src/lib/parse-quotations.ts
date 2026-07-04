@@ -1,6 +1,19 @@
 import * as XLSX from "xlsx";
 
-export type QuotationStatus = "Won" | "Active" | "Lost" | "Unknown";
+// Free-form status label preserved from the source file (title-cased).
+// Common values are "Won", "Active", "Lost", but any distinct status
+// found in the sheet (e.g. "Cancelled", "Pending") is kept as-is.
+export type QuotationStatus = string;
+
+export function isWon(s: string) {
+  return s.trim().toLowerCase().startsWith("won");
+}
+export function isActive(s: string) {
+  return s.trim().toLowerCase().startsWith("active");
+}
+export function isLost(s: string) {
+  return s.trim().toLowerCase().startsWith("lost");
+}
 
 export interface QuotationRow {
   id: string;
