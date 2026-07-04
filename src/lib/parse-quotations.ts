@@ -94,11 +94,18 @@ function str(v: unknown): string {
 }
 
 function normStatus(v: unknown): QuotationStatus {
-  const s = str(v).toLowerCase();
-  if (s.startsWith("won")) return "Won";
-  if (s.startsWith("active")) return "Active";
-  if (s.startsWith("lost")) return "Lost";
-  return "Unknown";
+  const raw = str(v);
+  if (!raw) return "Unknown";
+  const lower = raw.toLowerCase();
+  if (lower.startsWith("won")) return "Won";
+  if (lower.startsWith("active")) return "Active";
+  if (lower.startsWith("lost")) return "Lost";
+  // Preserve any other status label (e.g. "Cancelled", "Pending", "On Hold")
+  // with light title-casing so the UI shows a consistent form.
+  return raw
+    .split(/\s+/)
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(" ");
 }
 
 function normProb(v: unknown): number {
