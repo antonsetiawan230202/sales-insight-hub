@@ -122,7 +122,7 @@ export function FilterBar() {
         />
         <MultiSelect
           label="Status"
-          options={STATUSES}
+          options={opts.statuses}
           value={filters.statuses}
           onChange={(v) => setFilters({ statuses: v as QuotationStatus[] })}
         />
