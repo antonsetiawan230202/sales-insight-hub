@@ -39,7 +39,7 @@ export const Route = createFileRoute("/")({
   component: DashboardPage,
 });
 
-function DashboardPage() {
+export function DashboardPage() {
   const { quotations, ei, filters, quotationsMeta, eiMeta } = useDashboardStore();
 
   const filteredQuotes = useMemo(
