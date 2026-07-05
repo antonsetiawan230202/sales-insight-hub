@@ -151,3 +151,6 @@ export function KpiCards({
         sub="EDD + 10 days, unbilled (overdue carried forward)"
         icon={Timer}
       />
+    </div>
+  );
+}
