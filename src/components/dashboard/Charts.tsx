@@ -477,6 +477,9 @@ export function RevenueForecastChart({
       months[k] = { key: k, label: fmtMonth(d), actual: 0, forecast: 0 };
     }
 
+    const now = new Date();
+    const nowMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
     for (const r of idr) {
       if (r.invoiceDate && r.billedExcl > 0) {
         const d = new Date(
@@ -486,16 +489,17 @@ export function RevenueForecastChart({
         if (months[k]) months[k].actual += r.billedExcl;
       } else if (!r.invoiceDate && r.edd && r.orderIntakeExcl > 0) {
         const promised = new Date(r.edd.getTime() + 10 * 86400000);
-        const d = new Date(
+        let d = new Date(
           Date.UTC(promised.getUTCFullYear(), promised.getUTCMonth(), 1)
         );
+        // Carry overdue unbilled forward into the current month.
+        if (d.getTime() < nowMonth.getTime()) d = nowMonth;
         const k = monthKey(d);
         if (months[k]) months[k].forecast += r.orderIntakeExcl;
       }
     }
 
-    const now = new Date();
-    const nowMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
     const todayLabel = months[monthKey(nowMonth)]?.label ?? null;
 
     return { data: Object.values(months), todayLabel };
