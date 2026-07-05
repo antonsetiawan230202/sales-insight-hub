@@ -68,17 +68,26 @@ export function KpiCards({
 
   // EI: IDR only
   const idrEi = ei.filter((r) => r.currency.toUpperCase() === "IDR");
-  const now = Date.now();
+  const nowDate = new Date();
+  const now = nowDate.getTime();
   const in90 = now + 90 * 86400000;
+  const monthEnd = Date.UTC(
+    nowDate.getUTCFullYear(),
+    nowDate.getUTCMonth() + 1,
+    1
+  );
   const ytdBilled = idrEi
     .filter((r) => r.invoiceDate)
     .reduce((a, r) => a + r.billedExcl, 0);
-  const fc90 = idrEi
-    .filter((r) => !r.invoiceDate && r.edd)
-    .filter((r) => {
-      const t = r.edd!.getTime() + 10 * 86400000;
-      return t >= now && t <= in90;
-    })
+  // Unbilled orders with a promised date (EDD + 10d).
+  // Any promised date in the past is carried forward — it is still owed —
+  // and included in both the current-month and 90-day forecast.
+  const unbilled = idrEi.filter((r) => !r.invoiceDate && r.edd);
+  const fc90 = unbilled
+    .filter((r) => r.edd!.getTime() + 10 * 86400000 <= in90)
+    .reduce((a, r) => a + r.orderIntakeExcl, 0);
+  const fcMonth = unbilled
+    .filter((r) => r.edd!.getTime() + 10 * 86400000 < monthEnd)
     .reduce((a, r) => a + r.orderIntakeExcl, 0);
 
   return (
