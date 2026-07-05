@@ -139,11 +139,15 @@ export function KpiCards({
         tone="success"
       />
       <Kpi
+        label="Forecast this month"
+        value={fmtIdrCompact(fcMonth)}
+        sub="Unbilled, promised by month-end (incl. overdue)"
+        icon={Timer}
+        tone="warning"
+      />
+      <Kpi
         label="Forecast 90d"
         value={fmtIdrCompact(fc90)}
-        sub="EDD + 10 days, unbilled"
+        sub="EDD + 10 days, unbilled (overdue carried forward)"
         icon={Timer}
       />
-    </div>
-  );
-}
