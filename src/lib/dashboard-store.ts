@@ -59,10 +59,12 @@ export const useDashboardStore = create<StoreState>()(
       ei: [],
       eiMeta: null,
       filters: defaultFilters,
+      salesTarget: 0,
       setQuotations: (rows, meta) => set({ quotations: rows, quotationsMeta: meta }),
       setEi: (rows, meta) => set({ ei: rows, eiMeta: meta }),
       setFilters: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
       resetFilters: () => set({ filters: defaultFilters }),
+      setSalesTarget: (n) => set({ salesTarget: n }),
       clearAll: () =>
         set({
           quotations: [],
