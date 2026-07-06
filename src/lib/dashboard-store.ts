@@ -21,10 +21,12 @@ interface StoreState {
   ei: EiRow[];
   eiMeta: { fileName: string; sheet: string } | null;
   filters: Filters;
+  salesTarget: number;
   setQuotations: (rows: QuotationRow[], meta: { fileName: string; year: number; sheet: string }) => void;
   setEi: (rows: EiRow[], meta: { fileName: string; sheet: string }) => void;
   setFilters: (patch: Partial<Filters>) => void;
   resetFilters: () => void;
+  setSalesTarget: (n: number) => void;
   clearAll: () => void;
 }
 
