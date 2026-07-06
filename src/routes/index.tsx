@@ -14,6 +14,8 @@ import {
   RevenueForecastChart,
 } from "@/components/dashboard/Charts";
 import { QuotationsTable } from "@/components/dashboard/QuotationsTable";
+import { ReportsSection } from "@/components/reports/ReportsSection";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { BarChart3 } from "lucide-react";
 
