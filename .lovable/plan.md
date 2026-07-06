@@ -1,83 +1,93 @@
-## Sales & Prospects Dashboard
+## Management Reports — expansion plan
 
-A single-page dashboard where you drag & drop the two Excel files and immediately see filterable charts, KPIs, booking forecasts, and revenue forecasts. All parsing runs in the browser — nothing is uploaded to a server.
+Add a new **Reports** section to the dashboard with 7 tabbed report views, on top of the existing quotation + EI data already parsed and filtered. Everything reuses the current Zustand store, filter bar, and `xlsx` parsers — no new data source is required. All reports respect the global filter bar (salesman, status, probability, business area, brand, work type, date range).
 
-### 1. File upload & parsing
-- Two drop zones on top: **Quotations** (`QUOTATION_REFERENCE_NO_AND_STATUS_...xlsx`) and **EI Report** (`EI-_Additional_Report-YTD_...xlsx`).
-- Parse with `xlsx` (SheetJS) client-side.
-- Quotations: read the year sheet (e.g. `2026`); normalise columns (Quotation Date, Salesman, Status, Probability, IDR amount, Est PO Date, PO Received Date, Customer, Business Area, Brand, Work Type).
-- EI Report: read `Order Booking > Billing 2026`; normalise Customer, Currency, Order Intake (excl tax), Billed Orders (excl tax), Order Date, EDD (promised date to customer), Invoice Date, Job Status, Country.
-- **Currency filter: IDR only** — rows with other currencies are ignored in totals (still counted in row counts with a small "excluded: N rows" note).
-- Persist last-parsed data in `localStorage` so a refresh doesn't lose it.
+### 1. Navigation change
+- Add a **Tabs** control at the top of `src/routes/index.tsx`:
+  - **Overview** (current KPI + charts view, unchanged)
+  - **Reports** (new)
+- Inside **Reports**, a secondary Tabs list with 7 report tabs (Executive, Pipeline, Performance, Customer, Product, Loss, Trend).
+- Each report tab is a self-contained component under `src/components/reports/`.
 
-### 2. Global filter bar
-Filters apply to all charts/KPIs on the page:
-- Salesman (multi-select)
-- Quotation Status (Won / Active / Lost)
-- Probability range (slider 0–100%)
-- Business Area, Brand, Work Type (multi-select)
-- Date range (Quotation Date)
-- Reset button
+### 2. New components
 
-### 3. KPI cards
-- Total Quotations · Won · Active · Lost (counts + IDR value)
-- Win rate %
-- Weighted pipeline value (Σ Active IDR × Probability)
-- YTD Billed Revenue (IDR, excl tax)
-- Forecast revenue next 90 days
-
-### 4. Prospect / Quotation charts
-- **Status donut** (Won/Active/Lost by count and by IDR value — toggle).
-- **Quotations by Salesman** — stacked bar (Won/Active/Lost) with value + count toggle.
-- **Pipeline by Probability bucket** — bar chart: 0–25 / 25–50 / 50–75 / 75–100%, showing raw & weighted IDR.
-- **Top 10 Customers** by quoted value — horizontal bar.
-- **Business Area breakdown** — donut.
-- **Quotations table** — sortable, searchable, with all normalised fields; CSV export.
-
-### 5. Booking forecast (from Quotations)
-- Bucket **Active** quotations by month using **Est PO Date** (parsing quarters `Q1..Q4` → mid-quarter month, and `Jan`/`Feb`/etc. → that month of current year).
-- For each month show:
-  - Raw pipeline IDR (sum of Active)
-  - **Weighted booking forecast IDR** = Σ (Active IDR × Probability)
-  - Won IDR already booked in that month (from PO Received Date)
-- Grouped bar + line chart (Recharts ComposedChart).
-
-### 6. Revenue by month + forecast (from EI Report)
-- **Actual revenue** = sum of `Billed Orders (excluding tax)` grouped by **Invoice Date** month.
-- **Forecast revenue** for rows still unbilled (no Invoice Date, or Job Status ≠ "Closed (Billed)") = `Order Intake (excl tax)`, bucketed by **EDD + 10 days** month.
-- Combined chart: solid bars for Actual, hatched/lighter bars for Forecast, 12-month rolling view with a vertical "today" marker.
-- Second view: line chart of cumulative YTD actual vs. YTD target (target editable inline).
-
-### 7. Technical layout
 ```text
-src/routes/index.tsx           → Dashboard page
-src/lib/parse-quotations.ts    → SheetJS parser + row normaliser
-src/lib/parse-ei-report.ts     → SheetJS parser + row normaliser
-src/lib/dashboard-store.ts     → Zustand store (parsed rows, filters, persistence)
-src/components/dashboard/
-  FileUploadCard.tsx
-  FilterBar.tsx
-  KpiCards.tsx
-  StatusDonut.tsx
-  SalesmanBar.tsx
-  ProbabilityBar.tsx
-  TopCustomers.tsx
-  BusinessAreaDonut.tsx
-  QuotationsTable.tsx
-  BookingForecastChart.tsx    (weighted by probability, monthly)
-  RevenueForecastChart.tsx    (billed actual + EDD+10 forecast)
+src/components/reports/
+  ReportsSection.tsx            → tab shell + shared header / export button
+  ExecutiveSummary.tsx          → Report 1
+  PipelineAnalysis.tsx          → Report 2 (status / probability / quarter / aging)
+  PerformanceReport.tsx         → Report 3 (salesman + dep code tables)
+  CustomerMarketReport.tsx      → Report 4 (top customers, business area, repeat)
+  ProductBrandReport.tsx        → Report 5 (top brands / descriptions / work type)
+  LossAnalysisReport.tsx        → Report 6 (lost list, reason buckets, competitor)
+  TrendReport.tsx               → Report 7 (monthly trends)
+  shared/ReportTable.tsx        → sortable table w/ CSV export
+  shared/SectionCard.tsx        → titled card wrapper
 ```
-- Charts: **Recharts** (already common in shadcn stack).
-- Excel parsing: **xlsx** (SheetJS) via `bun add xlsx`.
-- State: **zustand** with `persist` middleware.
-- Number formatting: `Intl.NumberFormat('id-ID')` for IDR (compact `1,2 Mrd` in charts, full in tooltips).
-- All UI uses existing shadcn components + design tokens; no hardcoded colors.
 
-### Visual direction
-Clean analytics look: card-based grid, generous whitespace, subtle borders, semantic color tokens (primary for actual, muted for forecast, chart-1..5 for categories). Fully responsive; charts collapse to single column on mobile.
+### 3. Report-by-report content
 
-### Out of scope (can be added later)
-- Multi-currency conversion
-- Server-side persistence / multi-user
-- Historical trend beyond files uploaded
-- Auth / user roles
+**1. Executive Summary** — one-page KPI grid:
+- Total pipeline value (Active + Won) in IDR and USD (sum of `usd` column already parsed)
+- Total quote count · Win rate · Won value · Active value · Lost value
+- **Pipeline coverage**: active pipeline ÷ editable sales target (target stored in Zustand, persisted)
+- **Key opportunity**: single largest Active quote (customer, value, salesman)
+- **Key risk**: largest Lost quote in last 90 days OR largest Active with probability ≤ 25%
+- Mini status donut + top-5 customers strip
+
+**2. Pipeline Analysis**
+- *By status*: table + stacked bar (value & count)
+- *By probability bucket* (0–25 / 25–50 / 50–75 / 75–100): raw vs weighted IDR
+- *By quarter*: value grouped by `estPoMonth` → quarter (bar chart)
+- *Aging*: for Active rows, days since `quotationDate` bucketed (<30, 30–60, 60–90, 90+); highlight 90+ as stale
+
+**3. Performance Report**
+- Two grouped tables (salesman, then `depCode`) with columns:
+  - Quotes issued (count), Value issued (IDR), Won value, Win rate %, Avg margin % (on Won)
+- Sortable, CSV export per table
+- Bar chart: Won value by salesman
+
+**4. Customer & Market**
+- Top 10 customers by Active value AND by Won value (side-by-side)
+- Business area donut + table (count, value, win rate)
+- Repeat-customer table: customers with ≥ 2 quotes OR remarks containing "repeat" — flag with a badge
+
+**5. Product & Brand**
+- Top 10 brands by Won value (bar)
+- Top 10 descriptions by Won value (table)
+- Win rate by Work Type (bar + table with counts)
+
+**6. Competitive & Loss Analysis**
+- Table of all Lost quotes (customer, value, salesman, remarks)
+- **Reason buckets** — parse `remarks` with keyword rules: `no budget`, `budgetary`, `obsolete`, `lost to <name>`, `price`, `delivery`, else `Other`. Show as bar + table.
+- **Loss by competitor** — extract text after "lost to" / "to " in remarks; aggregate value by competitor name.
+
+**7. Monthly/Quarterly Trend**
+- Line/bar combo: quotes created per month (by `quotationDate`) vs won per month (by `poReceivedDate`) — count + value toggle
+- Active pipeline trend: cumulative Active value by `quotationDate` month
+- Won value trend by `poReceivedDate` month
+- Quarter toggle (M / Q)
+
+### 4. Store additions (`src/lib/dashboard-store.ts`)
+- Add `salesTarget: number` (IDR, default 0) + `setSalesTarget` — persisted.
+- No other schema changes; all reports derive from existing `quotations` + `ei` arrays.
+
+### 5. Shared helpers (`src/lib/report-utils.ts` — new)
+- `groupBy`, `sumBy`, `winRate`, `avgMargin`
+- `bucketProbability`, `bucketAging`, `quarterOf`
+- `parseLossReason(remarks)`, `parseCompetitor(remarks)`
+- `exportCsv(rows, filename)` (already partially exists in QuotationsTable — extract & reuse)
+
+### 6. Charts
+Reuse Recharts patterns from existing `Charts.tsx` (BarChart, ComposedChart, PieChart) and shadcn `chart.tsx` wrapper. All colors from `--chart-1..5` tokens.
+
+### 7. Out of scope for this pass
+- USD/SGD/EUR forecasting (only Executive shows USD total)
+- Editable per-salesman targets (single global target only)
+- Persisting reports as PDF (CSV export is provided per table)
+- Re-generating the Windows .exe / installers — that's a separate packaging step you can request once you've validated the new reports in the web preview.
+
+### Technical notes
+- All computations are pure functions over the filtered quotation set, memoised with `useMemo`.
+- Reports render only when data exists; otherwise show the same empty state as the current dashboard.
+- No backend calls; everything stays client-side (consistent with the existing app).
