@@ -14,6 +14,8 @@ import {
   RevenueForecastChart,
 } from "@/components/dashboard/Charts";
 import { QuotationsTable } from "@/components/dashboard/QuotationsTable";
+import { ReportsSection } from "@/components/reports/ReportsSection";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { BarChart3 } from "lucide-react";
 
@@ -129,29 +131,36 @@ export function DashboardPage() {
         {hasData && <KpiCards quotations={filteredQuotes} ei={ei} />}
 
         {quotations.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-              <StatusDonut rows={idrQuotes} />
-              <SalesmanBar rows={idrQuotes} />
-              <ProbabilityBar rows={idrQuotes} />
-            </div>
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <TopCustomers rows={idrQuotes} />
+          <Tabs defaultValue="overview">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="reports">Management Reports</TabsTrigger>
+            </TabsList>
+            <TabsContent value="overview" className="mt-3 space-y-3">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <StatusDonut rows={idrQuotes} />
+                <SalesmanBar rows={idrQuotes} />
+                <ProbabilityBar rows={idrQuotes} />
               </div>
-              <BusinessAreaDonut rows={idrQuotes} />
-            </div>
-            <BookingForecastChart rows={idrQuotes} />
-          </>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                  <TopCustomers rows={idrQuotes} />
+                </div>
+                <BusinessAreaDonut rows={idrQuotes} />
+              </div>
+              <BookingForecastChart rows={idrQuotes} />
+              {ei.length > 0 && <RevenueForecastChart rows={ei} />}
+              <QuotationsTable rows={filteredQuotes} />
+            </TabsContent>
+            <TabsContent value="reports" className="mt-3">
+              <ReportsSection quotations={filteredQuotes} />
+            </TabsContent>
+          </Tabs>
         )}
 
-        {ei.length > 0 && (
-          <div className="grid grid-cols-1 gap-3">
-            <RevenueForecastChart rows={ei} />
-          </div>
+        {quotations.length === 0 && ei.length > 0 && (
+          <RevenueForecastChart rows={ei} />
         )}
-
-        {quotations.length > 0 && <QuotationsTable rows={filteredQuotes} />}
 
         <footer className="pt-4 text-center text-[11px] text-muted-foreground">
           Files are parsed locally in your browser. No data is uploaded.

@@ -21,10 +21,12 @@ interface StoreState {
   ei: EiRow[];
   eiMeta: { fileName: string; sheet: string } | null;
   filters: Filters;
+  salesTarget: number;
   setQuotations: (rows: QuotationRow[], meta: { fileName: string; year: number; sheet: string }) => void;
   setEi: (rows: EiRow[], meta: { fileName: string; sheet: string }) => void;
   setFilters: (patch: Partial<Filters>) => void;
   resetFilters: () => void;
+  setSalesTarget: (n: number) => void;
   clearAll: () => void;
 }
 
@@ -57,10 +59,12 @@ export const useDashboardStore = create<StoreState>()(
       ei: [],
       eiMeta: null,
       filters: defaultFilters,
+      salesTarget: 0,
       setQuotations: (rows, meta) => set({ quotations: rows, quotationsMeta: meta }),
       setEi: (rows, meta) => set({ ei: rows, eiMeta: meta }),
       setFilters: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
       resetFilters: () => set({ filters: defaultFilters }),
+      setSalesTarget: (n) => set({ salesTarget: n }),
       clearAll: () =>
         set({
           quotations: [],
