@@ -103,18 +103,31 @@ const dateReviver = (_key: string, value: unknown) => {
 
 export const useDashboardStore = create<StoreState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       quotations: [],
       quotationsMeta: null,
       ei: [],
       eiMeta: null,
       filters: defaultFilters,
       salesTarget: 0,
+      sources: { quotations: null, ei: null },
       setQuotations: (rows, meta) => set({ quotations: rows, quotationsMeta: meta }),
       setEi: (rows, meta) => set({ ei: rows, eiMeta: meta }),
+      mergeQuotations: (rows, meta) => {
+        const { rows: merged, summary } = mergeRows(get().quotations, rows, quotationKey);
+        set({ quotations: merged, quotationsMeta: meta });
+        return summary;
+      },
+      mergeEi: (rows, meta) => {
+        const { rows: merged, summary } = mergeRows(get().ei, rows, eiKey);
+        set({ ei: merged, eiMeta: meta });
+        return summary;
+      },
       setFilters: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
       resetFilters: () => set({ filters: defaultFilters }),
       setSalesTarget: (n) => set({ salesTarget: n }),
+      setSource: (kind, source) =>
+        set((s) => ({ sources: { ...s.sources, [kind]: source } })),
       clearAll: () =>
         set({
           quotations: [],
@@ -122,6 +135,7 @@ export const useDashboardStore = create<StoreState>()(
           ei: [],
           eiMeta: null,
           filters: defaultFilters,
+          sources: { quotations: null, ei: null },
         }),
     }),
     {
