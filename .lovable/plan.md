@@ -1,93 +1,60 @@
-## Management Reports — expansion plan
+## Dynamic data refresh for Quotations & EI files
 
-Add a new **Reports** section to the dashboard with 7 tabbed report views, on top of the existing quotation + EI data already parsed and filtered. Everything reuses the current Zustand store, filter bar, and `xlsx` parsers — no new data source is required. All reports respect the global filter bar (salesman, status, probability, business area, brand, work type, date range).
+Today the app parses each Excel once on upload and stores the parsed rows in a persisted Zustand store. New rows added to the source .xlsx files on disk don't show up until the user manually re-uploads and replaces the file. This plan makes the app pick up new data automatically (or with one click) without losing filters, targets, or the current view.
 
-### 1. Navigation change
-- Add a **Tabs** control at the top of `src/routes/index.tsx`:
-  - **Overview** (current KPI + charts view, unchanged)
-  - **Reports** (new)
-- Inside **Reports**, a secondary Tabs list with 7 report tabs (Executive, Pipeline, Performance, Customer, Product, Loss, Trend).
-- Each report tab is a self-contained component under `src/components/reports/`.
+Two mechanisms are added side by side so it works everywhere (browser + the Electron .exe build):
 
-### 2. New components
+### 1. Live-linked source files (Chromium / Electron)
+Use the **File System Access API** (`window.showOpenFilePicker`) which is available in Chrome, Edge, and the Electron build we already ship.
 
-```text
-src/components/reports/
-  ReportsSection.tsx            → tab shell + shared header / export button
-  ExecutiveSummary.tsx          → Report 1
-  PipelineAnalysis.tsx          → Report 2 (status / probability / quarter / aging)
-  PerformanceReport.tsx         → Report 3 (salesman + dep code tables)
-  CustomerMarketReport.tsx      → Report 4 (top customers, business area, repeat)
-  ProductBrandReport.tsx        → Report 5 (top brands / descriptions / work type)
-  LossAnalysisReport.tsx        → Report 6 (lost list, reason buckets, competitor)
-  TrendReport.tsx               → Report 7 (monthly trends)
-  shared/ReportTable.tsx        → sortable table w/ CSV export
-  shared/SectionCard.tsx        → titled card wrapper
-```
+- New action on each drop zone: **"Link source file"** (in addition to the existing Choose / Drag&drop).
+- On pick, we store the returned `FileSystemFileHandle` in **IndexedDB** (handles can't go in `localStorage`). Key: `quotations-handle` / `ei-handle`.
+- On app start, if a handle exists, request permission (`handle.queryPermission` → `requestPermission`) and read the file. If the modified time differs from what's stored, re-parse.
+- Add a **"Refresh"** button next to each linked file that re-reads and re-parses on demand.
+- Add an **"Auto-refresh"** toggle (default on when a handle is linked) that polls `handle.getFile().lastModified` every 30 s; when it changes, re-parse silently and toast "Updated: +N new rows".
+- Linked-file status shown in the drop zone: filename, last-refreshed timestamp, row count, and a small "Live" badge.
 
-### 3. Report-by-report content
+### 2. Merge / append re-upload (universal fallback)
+For browsers without File System Access (Safari, Firefox) and for users who prefer manual control:
 
-**1. Executive Summary** — one-page KPI grid:
-- Total pipeline value (Active + Won) in IDR and USD (sum of `usd` column already parsed)
-- Total quote count · Win rate · Won value · Active value · Lost value
-- **Pipeline coverage**: active pipeline ÷ editable sales target (target stored in Zustand, persisted)
-- **Key opportunity**: single largest Active quote (customer, value, salesman)
-- **Key risk**: largest Lost quote in last 90 days OR largest Active with probability ≤ 25%
-- Mini status donut + top-5 customers strip
+- The existing upload flow gains a mode switch: **Replace** (current behaviour) vs **Merge** (default going forward).
+- Merge = parse the new file, then union its rows with the current store rows, deduping by a stable key:
+  - Quotations key: `quotationNo` (fallback to `${quotationDate}|${customer}|${idr}`).
+  - EI key: `invoiceRef || jobNumber || `${customerPo}|${orderDate}|${customer}``.
+- New rows are appended; existing keys are updated in place (so status/probability edits in the source file win). Deleted rows in the source are NOT removed in Merge mode — a "Replace" action is still available if the user wants a clean reload.
+- Toast summarises the diff: "Loaded 1,240 rows: +37 new, 12 updated, 1,191 unchanged".
 
-**2. Pipeline Analysis**
-- *By status*: table + stacked bar (value & count)
-- *By probability bucket* (0–25 / 25–50 / 50–75 / 75–100): raw vs weighted IDR
-- *By quarter*: value grouped by `estPoMonth` → quarter (bar chart)
-- *Aging*: for Active rows, days since `quotationDate` bucketed (<30, 30–60, 60–90, 90+); highlight 90+ as stale
+### 3. Store & parser changes
+- `src/lib/dashboard-store.ts`
+  - Add `mergeQuotations(rows)` and `mergeEi(rows)` that dedupe by the keys above and return a `{added, updated, unchanged}` summary.
+  - Add `sources: { quotations?: LinkedSource; ei?: LinkedSource }` where `LinkedSource = { fileName; lastModified; lastRefreshedAt; autoRefresh }`. Persisted (handles are NOT here — those live in IndexedDB).
+  - Add `setSource(kind, source)` and `clearSource(kind)`.
+- `src/lib/parse-quotations.ts` / `src/lib/parse-ei-report.ts`: ensure each parsed row exposes the dedupe key described above (compute if missing; no schema break).
+- New `src/lib/file-handle-store.ts`: tiny IndexedDB wrapper (`idb-keyval` or ~30 lines of native IDB) for the two handles.
+- New `src/hooks/use-live-source.ts`: reads a stored handle, sets up polling, exposes `{ refresh, status, lastModified }`.
 
-**3. Performance Report**
-- Two grouped tables (salesman, then `depCode`) with columns:
-  - Quotes issued (count), Value issued (IDR), Won value, Win rate %, Avg margin % (on Won)
-- Sortable, CSV export per table
-- Bar chart: Won value by salesman
+### 4. UI changes
+- `src/components/dashboard/FileUploadCard.tsx`
+  - Each `DropZone` gains: **Link** button (calls `showOpenFilePicker`), **Refresh** button (visible when linked), **Auto-refresh** switch, and shows `Live · updated 2 min ago`.
+  - The existing Choose/Drop path stays and now defaults to Merge; a small kebab menu offers "Replace instead".
+- If the File System Access API is unavailable, hide the Link/Auto-refresh controls and keep Merge upload only. Show a one-line hint: "Auto-refresh requires Chrome, Edge, or the desktop app."
 
-**4. Customer & Market**
-- Top 10 customers by Active value AND by Won value (side-by-side)
-- Business area donut + table (count, value, win rate)
-- Repeat-customer table: customers with ≥ 2 quotes OR remarks containing "repeat" — flag with a badge
+### 5. Electron
+- No native changes needed — the packaged app already runs Chromium, so `showOpenFilePicker` and IndexedDB work out of the box.
+- On first launch after this change, existing users' data stays intact (persisted store is untouched); they only see the new Link/Refresh controls.
 
-**5. Product & Brand**
-- Top 10 brands by Won value (bar)
-- Top 10 descriptions by Won value (table)
-- Win rate by Work Type (bar + table with counts)
+### 6. Empty / permission states
+- If a linked handle loses permission (browser cleared it, user reopened the app), show a "Reconnect" prompt in the drop zone instead of failing silently.
+- If the file is renamed/moved, `getFile()` throws — surface a toast and offer to re-link.
 
-**6. Competitive & Loss Analysis**
-- Table of all Lost quotes (customer, value, salesman, remarks)
-- **Reason buckets** — parse `remarks` with keyword rules: `no budget`, `budgetary`, `obsolete`, `lost to <name>`, `price`, `delivery`, else `Other`. Show as bar + table.
-- **Loss by competitor** — extract text after "lost to" / "to " in remarks; aggregate value by competitor name.
-
-**7. Monthly/Quarterly Trend**
-- Line/bar combo: quotes created per month (by `quotationDate`) vs won per month (by `poReceivedDate`) — count + value toggle
-- Active pipeline trend: cumulative Active value by `quotationDate` month
-- Won value trend by `poReceivedDate` month
-- Quarter toggle (M / Q)
-
-### 4. Store additions (`src/lib/dashboard-store.ts`)
-- Add `salesTarget: number` (IDR, default 0) + `setSalesTarget` — persisted.
-- No other schema changes; all reports derive from existing `quotations` + `ei` arrays.
-
-### 5. Shared helpers (`src/lib/report-utils.ts` — new)
-- `groupBy`, `sumBy`, `winRate`, `avgMargin`
-- `bucketProbability`, `bucketAging`, `quarterOf`
-- `parseLossReason(remarks)`, `parseCompetitor(remarks)`
-- `exportCsv(rows, filename)` (already partially exists in QuotationsTable — extract & reuse)
-
-### 6. Charts
-Reuse Recharts patterns from existing `Charts.tsx` (BarChart, ComposedChart, PieChart) and shadcn `chart.tsx` wrapper. All colors from `--chart-1..5` tokens.
-
-### 7. Out of scope for this pass
-- USD/SGD/EUR forecasting (only Executive shows USD total)
-- Editable per-salesman targets (single global target only)
-- Persisting reports as PDF (CSV export is provided per table)
-- Re-generating the Windows .exe / installers — that's a separate packaging step you can request once you've validated the new reports in the web preview.
+### Out of scope
+- Watching a whole folder or cloud drive (OneDrive/Google Drive/SharePoint). Requires their APIs and auth.
+- Server-side ingestion / scheduled sync. This app is client-only by design.
+- Row-level deletion detection in Merge mode (documented as a trade-off; Replace still available).
+- Repackaging the Windows .exe — separate step on request once you've validated in the web preview.
 
 ### Technical notes
-- All computations are pure functions over the filtered quotation set, memoised with `useMemo`.
-- Reports render only when data exists; otherwise show the same empty state as the current dashboard.
-- No backend calls; everything stays client-side (consistent with the existing app).
+- Handles must be stored in IndexedDB; `localStorage`/`JSON.stringify` will silently drop them.
+- Permissions need a user gesture the first time per session — the Refresh button provides that gesture; polling continues silently after.
+- Merge diff runs off the parsed row arrays with a `Map` keyed by the dedupe key: O(n).
+- All reports (Overview, Management, Financial) automatically reflect updates because they read from the same Zustand arrays via `useMemo`.

@@ -15,6 +15,21 @@ export interface Filters {
   dateTo: string | null;
 }
 
+export interface LinkedSource {
+  fileName: string;
+  lastModified: number;
+  lastRefreshedAt: number;
+  autoRefresh: boolean;
+  linked: boolean;
+}
+
+export interface MergeSummary {
+  added: number;
+  updated: number;
+  unchanged: number;
+  total: number;
+}
+
 interface StoreState {
   quotations: QuotationRow[];
   quotationsMeta: { fileName: string; year: number; sheet: string } | null;
@@ -22,12 +37,47 @@ interface StoreState {
   eiMeta: { fileName: string; sheet: string } | null;
   filters: Filters;
   salesTarget: number;
+  sources: { quotations: LinkedSource | null; ei: LinkedSource | null };
   setQuotations: (rows: QuotationRow[], meta: { fileName: string; year: number; sheet: string }) => void;
   setEi: (rows: EiRow[], meta: { fileName: string; sheet: string }) => void;
+  mergeQuotations: (rows: QuotationRow[], meta: { fileName: string; year: number; sheet: string }) => MergeSummary;
+  mergeEi: (rows: EiRow[], meta: { fileName: string; sheet: string }) => MergeSummary;
   setFilters: (patch: Partial<Filters>) => void;
   resetFilters: () => void;
   setSalesTarget: (n: number) => void;
+  setSource: (kind: "quotations" | "ei", source: LinkedSource | null) => void;
   clearAll: () => void;
+}
+
+export function quotationKey(r: QuotationRow): string {
+  if (r.reference && r.reference.trim()) return `ref:${r.reference.trim().toUpperCase()}`;
+  const d = r.quotationDate ? r.quotationDate.toISOString().slice(0, 10) : "nodate";
+  return `q:${d}|${r.customer}|${r.idr}`;
+}
+
+export function eiKey(r: EiRow): string {
+  if (r.invoiceRef && r.invoiceRef.trim()) return `inv:${r.invoiceRef.trim().toUpperCase()}`;
+  if (r.jobNumber && r.jobNumber.trim()) return `job:${r.jobNumber.trim().toUpperCase()}`;
+  const d = r.orderDate ? r.orderDate.toISOString().slice(0, 10) : "nodate";
+  return `ei:${r.customerPo}|${d}|${r.customer}`;
+}
+
+function mergeRows<T>(existing: T[], incoming: T[], keyOf: (r: T) => string): { rows: T[]; summary: MergeSummary } {
+  const map = new Map<string, T>();
+  for (const r of existing) map.set(keyOf(r), r);
+  let added = 0, updated = 0, unchanged = 0;
+  for (const r of incoming) {
+    const k = keyOf(r);
+    if (!map.has(k)) {
+      map.set(k, r);
+      added++;
+    } else {
+      const prev = map.get(k)!;
+      if (JSON.stringify(prev) === JSON.stringify(r)) unchanged++;
+      else { map.set(k, r); updated++; }
+    }
+  }
+  return { rows: Array.from(map.values()), summary: { added, updated, unchanged, total: map.size } };
 }
 
 const defaultFilters: Filters = {
@@ -53,18 +103,31 @@ const dateReviver = (_key: string, value: unknown) => {
 
 export const useDashboardStore = create<StoreState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       quotations: [],
       quotationsMeta: null,
       ei: [],
       eiMeta: null,
       filters: defaultFilters,
       salesTarget: 0,
+      sources: { quotations: null, ei: null },
       setQuotations: (rows, meta) => set({ quotations: rows, quotationsMeta: meta }),
       setEi: (rows, meta) => set({ ei: rows, eiMeta: meta }),
+      mergeQuotations: (rows, meta) => {
+        const { rows: merged, summary } = mergeRows(get().quotations, rows, quotationKey);
+        set({ quotations: merged, quotationsMeta: meta });
+        return summary;
+      },
+      mergeEi: (rows, meta) => {
+        const { rows: merged, summary } = mergeRows(get().ei, rows, eiKey);
+        set({ ei: merged, eiMeta: meta });
+        return summary;
+      },
       setFilters: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
       resetFilters: () => set({ filters: defaultFilters }),
       setSalesTarget: (n) => set({ salesTarget: n }),
+      setSource: (kind, source) =>
+        set((s) => ({ sources: { ...s.sources, [kind]: source } })),
       clearAll: () =>
         set({
           quotations: [],
@@ -72,6 +135,7 @@ export const useDashboardStore = create<StoreState>()(
           ei: [],
           eiMeta: null,
           filters: defaultFilters,
+          sources: { quotations: null, ei: null },
         }),
     }),
     {
