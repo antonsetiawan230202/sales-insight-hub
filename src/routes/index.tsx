@@ -15,6 +15,7 @@ import {
 } from "@/components/dashboard/Charts";
 import { QuotationsTable } from "@/components/dashboard/QuotationsTable";
 import { ReportsSection } from "@/components/reports/ReportsSection";
+import { FinancialReportsSection } from "@/components/financial/FinancialReportsSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { BarChart3 } from "lucide-react";
@@ -135,6 +136,7 @@ export function DashboardPage() {
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="reports">Management Reports</TabsTrigger>
+              <TabsTrigger value="financial">Financial Reports</TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="mt-3 space-y-3">
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -154,6 +156,9 @@ export function DashboardPage() {
             </TabsContent>
             <TabsContent value="reports" className="mt-3">
               <ReportsSection quotations={filteredQuotes} />
+            </TabsContent>
+            <TabsContent value="financial" className="mt-3">
+              <FinancialReportsSection ei={ei} />
             </TabsContent>
           </Tabs>
         )}
