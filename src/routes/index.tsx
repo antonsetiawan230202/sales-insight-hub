@@ -157,6 +157,9 @@ export function DashboardPage() {
             <TabsContent value="reports" className="mt-3">
               <ReportsSection quotations={filteredQuotes} />
             </TabsContent>
+            <TabsContent value="financial" className="mt-3">
+              <FinancialReportsSection ei={ei} />
+            </TabsContent>
           </Tabs>
         )}
 
