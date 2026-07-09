@@ -94,13 +94,29 @@ export function parseEiWorkbook(data: ArrayBuffer): {
   };
 
   const rows: EiRow[] = [];
+  // Aggregate / summary row patterns that appear inline in the sheet and must be excluded
+  // from real order data (they have huge values but no currency/PO/order date):
+  //   "Backlog 31 May", "Grand total (IDR)", "Total", "YTD Order Booking", "Month (2026)", etc.
+  const isAggregateLabel = (s: string) =>
+    /^(backlog\b|grand\s*total\b|sub\s*total\b|^total\b|ytd\b|month\b|forecast\b|pivot\b)/i.test(s.trim());
+
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i] as unknown[];
     if (!r) continue;
     const customer = str(r[cols.customer]);
     const po = str(r[cols.customerPo]);
     const orderDate = excelDate(r[cols.orderDate]);
-    if (!customer && !po && !orderDate) continue;
+    const invoiceDate = excelDate(r[cols.invoiceDate]);
+    const currency = str(r[cols.currency]);
+
+    // Skip empty rows
+    if (!customer && !po && !orderDate && !invoiceDate) continue;
+    // Skip aggregate/summary rows (e.g. "Backlog 31 May", "Grand total (IDR)")
+    if (isAggregateLabel(customer)) continue;
+    // A real order row must have either a currency OR an order/invoice date + a PO/customer.
+    // Rows with no currency AND no dates are pivot leftovers.
+    if (!currency && !orderDate && !invoiceDate) continue;
+
 
     rows.push({
       id: `${po || customer || "row"}-${i}`,
