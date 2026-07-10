@@ -495,7 +495,10 @@ export function RevenueForecastChart({
         // Carry overdue unbilled forward into the current month.
         if (d.getTime() < nowMonth.getTime()) d = nowMonth;
         const k = monthKey(d);
-        if (months[k]) months[k].forecast += r.orderIntakeExcl;
+        // Forecast the remaining backlog, not the full intake — avoids overstating
+        // rows that are partially billed.
+        const remaining = Math.max(0, r.orderIntakeExcl - r.billedExcl);
+        if (months[k]) months[k].forecast += remaining;
       }
     }
 

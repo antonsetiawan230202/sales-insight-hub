@@ -1,7 +1,7 @@
 import { fmtIdrCompact, fmtInt, fmtPct } from "@/lib/format";
 import type { QuotationRow } from "@/lib/parse-quotations";
 import type { EiRow } from "@/lib/parse-ei-report";
-import { TrendingUp, Trophy, Timer, XCircle, Coins, LineChart } from "lucide-react";
+import { TrendingUp, Trophy, Timer, Circle as XCircle, Coins, ChartLine as LineChart } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -82,13 +82,17 @@ export function KpiCards({
   // Unbilled orders with a promised date (EDD + 10d).
   // Any promised date in the past is carried forward — it is still owed —
   // and included in both the current-month and 90-day forecast.
+  // Use the remaining backlog (intake - billed) so partially-billed rows
+  // are not overstated.
   const unbilled = idrEi.filter((r) => !r.invoiceDate && r.edd);
+  const remaining = (r: typeof idrEi[number]) =>
+    Math.max(0, (r.orderIntakeExcl || 0) - (r.billedExcl || 0));
   const fc90 = unbilled
     .filter((r) => r.edd!.getTime() + 10 * 86400000 <= in90)
-    .reduce((a, r) => a + r.orderIntakeExcl, 0);
+    .reduce((a, r) => a + remaining(r), 0);
   const fcMonth = unbilled
     .filter((r) => r.edd!.getTime() + 10 * 86400000 < monthEnd)
-    .reduce((a, r) => a + r.orderIntakeExcl, 0);
+    .reduce((a, r) => a + remaining(r), 0);
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

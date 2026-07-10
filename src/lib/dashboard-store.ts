@@ -58,8 +58,12 @@ export function quotationKey(r: QuotationRow): string {
 export function eiKey(r: EiRow): string {
   if (r.invoiceRef && r.invoiceRef.trim()) return `inv:${r.invoiceRef.trim().toUpperCase()}`;
   if (r.jobNumber && r.jobNumber.trim()) return `job:${r.jobNumber.trim().toUpperCase()}`;
+  // For rows without a unique invoice/job number, include the external doc no
+  // and the source row id (which encodes the original sheet row index) so that
+  // multiple line items sharing the same PO + date + customer do not collide.
   const d = r.orderDate ? r.orderDate.toISOString().slice(0, 10) : "nodate";
-  return `ei:${r.customerPo}|${d}|${r.customer}`;
+  const ext = r.externalDocNo ? r.externalDocNo.trim().toUpperCase() : "noext";
+  return `ei:${r.customerPo}|${d}|${r.customer}|${ext}|${r.id}`;
 }
 
 function mergeRows<T>(existing: T[], incoming: T[], keyOf: (r: T) => string): { rows: T[]; summary: MergeSummary } {

@@ -98,7 +98,7 @@ export function parseEiWorkbook(data: ArrayBuffer): {
   // from real order data (they have huge values but no currency/PO/order date):
   //   "Backlog 31 May", "Grand total (IDR)", "Total", "YTD Order Booking", "Month (2026)", etc.
   const isAggregateLabel = (s: string) =>
-    /^(backlog\b|grand\s*total\b|sub\s*total\b|^total\b|ytd\b|month\b|forecast\b|pivot\b)/i.test(s.trim());
+    /^(backlog\b|grand\s*total\b|sub\s*total\b|^total\b|ytd\b|month\b|forecast\b|pivot\b|sum\b|opening\b|closing\b|net\b)/i.test(s.trim());
 
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i] as unknown[];

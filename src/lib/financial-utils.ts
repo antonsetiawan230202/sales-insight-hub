@@ -42,6 +42,10 @@ export function backlogValue(r: EiRow): number {
   return Math.max(0, (r.orderIntakeExcl || 0) - (r.billedExcl || 0));
 }
 
+export function isOverBilled(r: EiRow): boolean {
+  return (r.billedExcl || 0) > (r.orderIntakeExcl || 0) && (r.orderIntakeExcl || 0) > 0;
+}
+
 export function agingBucket(days: number): string {
   if (days < 31) return "0–30 days";
   if (days < 61) return "31–60 days";

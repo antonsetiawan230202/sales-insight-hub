@@ -4,7 +4,7 @@ import type { EiRow } from "@/lib/parse-ei-report";
 import { fmtIdr, fmtIdrCompact, fmtInt, fmtMonth, monthFloorUtc, monthKey } from "@/lib/format";
 import { SectionCard } from "@/components/reports/shared/SectionCard";
 import { ReportTable } from "@/components/reports/shared/ReportTable";
-import { idrOnly, backlogValue, sumBy } from "@/lib/financial-utils";
+import { idrOnly, backlogValue, sumBy, isOverBilled } from "@/lib/financial-utils";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 const tt = { contentStyle: { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--popover-foreground)", fontSize: 12 } };
@@ -114,7 +114,7 @@ export function BacklogForecastReport({ ei }: { ei: EiRow[] }) {
 
       <SectionCard title="Backlog details">
         <ReportTable
-          rows={rows.filter((r) => backlogValue(r) > 0).sort((a, b) => backlogValue(b) - backlogValue(a))}
+          rows={rows.filter((r) => backlogValue(r) > 0 || isOverBilled(r)).sort((a, b) => backlogValue(b) - backlogValue(a))}
           csvFilename="backlog.csv"
           columns={[
             { key: "customer", label: "Customer" },
@@ -124,6 +124,7 @@ export function BacklogForecastReport({ ei }: { ei: EiRow[] }) {
             { key: "intake", label: "Intake", align: "right", render: (r) => fmtIdrCompact(r.orderIntakeExcl), csv: (r) => r.orderIntakeExcl },
             { key: "billed", label: "Billed", align: "right", render: (r) => fmtIdrCompact(r.billedExcl), csv: (r) => r.billedExcl },
             { key: "backlog", label: "Backlog", align: "right", render: (r) => fmtIdrCompact(backlogValue(r)), csv: (r) => backlogValue(r) },
+            { key: "overBilled", label: "Flag", render: (r) => isOverBilled(r) ? "Over-billed" : "", csv: (r) => isOverBilled(r) ? "Over-billed" : "" },
             { key: "jobStatus", label: "Status" },
           ]}
         />
