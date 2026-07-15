@@ -105,6 +105,15 @@ const dateReviver = (_key: string, value: unknown) => {
   return value;
 };
 
+// Detect if running inside Electron with IPC file access
+function getElectronFs(): any | null {
+  if (typeof window === "undefined") return null;
+  return (window as any).electronFs ?? null;
+}
+
+// Debounce helper for file writes
+let writeTimer: ReturnType<typeof setTimeout> | null = null;
+
 export const useDashboardStore = create<StoreState>()(
   persist(
     (set, get) => ({
@@ -146,6 +155,14 @@ export const useDashboardStore = create<StoreState>()(
       name: "sales-dashboard-v1",
       storage: {
         getItem: (name) => {
+          const efs = getElectronFs();
+          if (efs) {
+            // Electron: read from JSON file (sync wrapper around async IPC)
+            // zustand persist expects a synchronous return, so we use a
+            // lazy-init pattern: return null on first call, then hydrate
+            // asynchronously via rehydrate().
+            return null;
+          }
           if (typeof window === "undefined") return null;
           const s = window.localStorage.getItem(name);
           if (!s) return null;
@@ -156,6 +173,15 @@ export const useDashboardStore = create<StoreState>()(
           }
         },
         setItem: (name, value) => {
+          const efs = getElectronFs();
+          if (efs) {
+            // Debounce writes to avoid excessive I/O
+            if (writeTimer) clearTimeout(writeTimer);
+            writeTimer = setTimeout(() => {
+              efs.writeJson(value).catch(() => {});
+            }, 500);
+            return;
+          }
           if (typeof window === "undefined") return;
           try {
             window.localStorage.setItem(name, JSON.stringify(value));
@@ -164,6 +190,12 @@ export const useDashboardStore = create<StoreState>()(
           }
         },
         removeItem: (name) => {
+          const efs = getElectronFs();
+          if (efs) {
+            // Write empty state to clear
+            efs.writeJson({ state: {}, version: 0 }).catch(() => {});
+            return;
+          }
           if (typeof window === "undefined") return;
           window.localStorage.removeItem(name);
         },
@@ -171,6 +203,23 @@ export const useDashboardStore = create<StoreState>()(
     }
   )
 );
+
+// Async hydration for Electron: load from JSON file then set state
+export async function hydrateFromElectron(): Promise<boolean> {
+  const efs = getElectronFs();
+  if (!efs) return false;
+  try {
+    const data = await efs.readJson();
+    if (!data) return false;
+    const revived = JSON.parse(JSON.stringify(data), dateReviver);
+    if (revived?.state) {
+      useDashboardStore.setState(revived.state);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function filterQuotations(rows: QuotationRow[], f: Filters): QuotationRow[] {
   const from = f.dateFrom ? new Date(f.dateFrom).getTime() : null;

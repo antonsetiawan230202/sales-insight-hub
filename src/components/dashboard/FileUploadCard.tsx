@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, CheckCircle2, X, Link2, RefreshCw, Zap, ZapOff } from "lucide-react";
+import { Upload, FileSpreadsheet, CircleCheck as CheckCircle2, X, Link2, RefreshCw, Zap, ZapOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { parseQuotationsWorkbook } from "@/lib/parse-quotations";
 import { parseEiWorkbook } from "@/lib/parse-ei-report";
 import { useDashboardStore, type LinkedSource, type MergeSummary } from "@/lib/dashboard-store";
 import { saveHandle, loadHandle, deleteHandle, supportsFileSystemAccess } from "@/lib/file-handle-store";
+import { getElectronFs, matchKind } from "@/hooks/use-bootstrap-data";
 import { toast } from "sonner";
 
 type Kind = "quotations" | "ei";
@@ -285,22 +286,46 @@ export function FileUploadCard() {
   // Polling for auto-refresh
   useEffect(() => {
     const timer = setInterval(async () => {
+      const efs = getElectronFs();
       for (const kind of ["quotations", "ei"] as Kind[]) {
         const src = sources[kind];
+        if (!src?.linked || !src.autoRefresh) continue;
+
+        // Case 1: File System Access API handle (browser / Electron with handle)
         const h = handlesRef.current[kind];
-        if (!src?.linked || !src.autoRefresh || !h) continue;
-        try {
-          const file = await h.getFile();
-          if (file.lastModified === src.lastModified) continue;
-          const buf = await file.arrayBuffer();
-          const summary = await applyParsed(kind, buf, file.name, file.lastModified, true);
-          if (summary.added || summary.updated) {
-            toast.success(
-              `${kind === "quotations" ? "Quotations" : "EI report"} updated · ${summaryText(summary)}`
-            );
+        if (h) {
+          try {
+            const file = await h.getFile();
+            if (file.lastModified === src.lastModified) continue;
+            const buf = await file.arrayBuffer();
+            const summary = await applyParsed(kind, buf, file.name, file.lastModified, true);
+            if (summary.added || summary.updated) {
+              toast.success(
+                `${kind === "quotations" ? "Quotations" : "EI report"} updated · ${summaryText(summary)}`
+              );
+            }
+          } catch (err) {
+            console.warn("Auto-refresh failed", kind, err);
           }
-        } catch (err) {
-          console.warn("Auto-refresh failed", kind, err);
+          continue;
+        }
+
+        // Case 2: Bundled file via Electron IPC (no FileSystemFileHandle)
+        if (efs && src.fileName) {
+          try {
+            const mtime = await efs.statDataFile(src.fileName);
+            if (mtime == null || Math.floor(mtime) === src.lastModified) continue;
+            const buf = await efs.readDataFile(src.fileName);
+            if (!buf) continue;
+            const summary = await applyParsed(kind, buf, src.fileName, Math.floor(mtime), true);
+            if (summary.added || summary.updated) {
+              toast.success(
+                `${kind === "quotations" ? "Quotations" : "EI report"} updated · ${summaryText(summary)}`
+              );
+            }
+          } catch (err) {
+            console.warn("Auto-refresh (bundled) failed", kind, err);
+          }
         }
       }
     }, 30000);

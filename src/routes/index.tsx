@@ -18,7 +18,8 @@ import { ReportsSection } from "@/components/reports/ReportsSection";
 import { FinancialReportsSection } from "@/components/financial/FinancialReportsSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
-import { BarChart3 } from "lucide-react";
+import { ChartBar as BarChart3 } from "lucide-react";
+import { useBootstrapData } from "@/hooks/use-bootstrap-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/")({
 
 export function DashboardPage() {
   const { quotations, ei, filters, quotationsMeta, eiMeta } = useDashboardStore();
+  useBootstrapData();
 
   const filteredQuotes = useMemo(
     () => filterQuotations(quotations, filters),
