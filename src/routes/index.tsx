@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useDashboardStore, filterQuotations } from "@/lib/dashboard-store";
+import { linkEiToQuotations } from "@/lib/link-utils";
 import { FileUploadCard } from "@/components/dashboard/FileUploadCard";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { KpiCards } from "@/components/dashboard/KpiCards";
@@ -68,6 +69,11 @@ export function DashboardPage() {
     [ei]
   );
 
+  const linkedEi = useMemo(
+    () => linkEiToQuotations(ei, filteredQuotes),
+    [ei, filteredQuotes]
+  );
+
   const hasData = quotations.length > 0 || ei.length > 0;
 
   return (
@@ -131,7 +137,7 @@ export function DashboardPage() {
           </div>
         )}
 
-        {hasData && <KpiCards quotations={filteredQuotes} ei={ei} />}
+        {hasData && <KpiCards quotations={filteredQuotes} ei={linkedEi} />}
 
         {quotations.length > 0 && (
           <Tabs defaultValue="overview">
@@ -160,7 +166,7 @@ export function DashboardPage() {
               <ReportsSection quotations={filteredQuotes} />
             </TabsContent>
             <TabsContent value="financial" className="mt-3">
-              <FinancialReportsSection ei={ei} />
+              <FinancialReportsSection ei={linkedEi} quotations={filteredQuotes} />
             </TabsContent>
           </Tabs>
         )}

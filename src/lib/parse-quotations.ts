@@ -38,6 +38,7 @@ export interface QuotationRow {
   estPoMonth: Date | null; // resolved month
   poReceivedDate: Date | null;
   poNumber: string;
+  customerPo: string;
   actualIdr: number;
   salesman: string;
   remarks: string;
@@ -174,6 +175,7 @@ export function parseQuotationsWorkbook(data: ArrayBuffer): {
     estPoDate: pick("EST PO DATE"),
     poReceivedDate: pick("PO RECEIVED DATE"),
     poNumber: pick("PO NUMBER"),
+    customerPo: pick("CUSTOMER PO", "CUSTOMER PO NUMBER", "CUSTOMER PO NO", "CUSTOMER PO #"),
     actualIdr: pick("(IDR)2", "(IDR) 2"),
     salesman: pick("SALESMAN"),
     remarks: pick("REMARKS"),
@@ -209,6 +211,7 @@ export function parseQuotationsWorkbook(data: ArrayBuffer): {
       estPoMonth: resolveEstPoMonth(r[H.estPoDate], year),
       poReceivedDate: excelDate(r[H.poReceivedDate]),
       poNumber: str(r[H.poNumber]),
+      customerPo: str(r[H.customerPo]),
       actualIdr: num(r[H.actualIdr]),
       salesman: str(r[H.salesman]),
       remarks: str(r[H.remarks]),

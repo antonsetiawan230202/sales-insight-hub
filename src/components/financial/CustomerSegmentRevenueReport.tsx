@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useMemo } from "react";
 import type { EiRow } from "@/lib/parse-ei-report";
+import type { QuotationRow } from "@/lib/parse-quotations";
 import { fmtIdr, fmtIdrCompact, fmtInt, fmtMonth, monthFloorUtc, monthKey } from "@/lib/format";
 import { SectionCard } from "@/components/reports/shared/SectionCard";
 import { ReportTable } from "@/components/reports/shared/ReportTable";
@@ -9,7 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 const tt = { contentStyle: { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--popover-foreground)", fontSize: 12 } };
 
-export function CustomerSegmentRevenueReport({ ei }: { ei: EiRow[] }) {
+export function CustomerSegmentRevenueReport({ ei, quotations: _quotations }: { ei: EiRow[]; quotations: QuotationRow[] }) {
   const rows = useMemo(() => idrOnly(ei), [ei]);
 
   const byCustomer = useMemo(() => groupSum(rows, (r) => r.customer || "—", (r) => r.billedExcl), [rows]);

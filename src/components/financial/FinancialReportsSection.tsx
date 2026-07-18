@@ -1,4 +1,5 @@
 import type { EiRow } from "@/lib/parse-ei-report";
+import type { QuotationRow } from "@/lib/parse-quotations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrderIntakeBillingReport } from "./OrderIntakeBillingReport";
 import { BacklogForecastReport } from "./BacklogForecastReport";
@@ -9,7 +10,13 @@ import { JobStatusReport } from "./JobStatusReport";
 import { ProfitabilityMarginReport } from "./ProfitabilityMarginReport";
 import { FinancialTrendReport } from "./FinancialTrendReport";
 
-export function FinancialReportsSection({ ei }: { ei: EiRow[] }) {
+export function FinancialReportsSection({
+  ei,
+  quotations,
+}: {
+  ei: EiRow[];
+  quotations: QuotationRow[];
+}) {
   if (!ei.length) {
     return (
       <div className="rounded-xl border border-dashed bg-card/50 p-10 text-center">
@@ -35,10 +42,10 @@ export function FinancialReportsSection({ ei }: { ei: EiRow[] }) {
       <TabsContent value="intake" className="mt-3"><OrderIntakeBillingReport ei={ei} /></TabsContent>
       <TabsContent value="backlog" className="mt-3"><BacklogForecastReport ei={ei} /></TabsContent>
       <TabsContent value="ar" className="mt-3"><ArAgingReport ei={ei} /></TabsContent>
-      <TabsContent value="customer" className="mt-3"><CustomerSegmentRevenueReport ei={ei} /></TabsContent>
+      <TabsContent value="customer" className="mt-3"><CustomerSegmentRevenueReport ei={ei} quotations={quotations} /></TabsContent>
       <TabsContent value="vendor" className="mt-3"><VendorPerformanceReport ei={ei} /></TabsContent>
       <TabsContent value="job" className="mt-3"><JobStatusReport ei={ei} /></TabsContent>
-      <TabsContent value="margin" className="mt-3"><ProfitabilityMarginReport ei={ei} /></TabsContent>
+      <TabsContent value="margin" className="mt-3"><ProfitabilityMarginReport ei={ei} quotations={quotations} /></TabsContent>
       <TabsContent value="trend" className="mt-3"><FinancialTrendReport ei={ei} /></TabsContent>
     </Tabs>
   );

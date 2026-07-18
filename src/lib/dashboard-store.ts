@@ -6,8 +6,7 @@ import type { EiRow } from "./parse-ei-report";
 export interface Filters {
   salesmen: string[];
   statuses: QuotationStatus[];
-  probMin: number; // 0..1
-  probMax: number; // 0..1
+  probabilities: number[]; // exact values 0..1 (e.g. 0, 0.25, 0.5, 0.75, 0.9, 1)
   businessAreas: string[];
   brands: string[];
   workTypes: string[];
@@ -87,8 +86,7 @@ function mergeRows<T>(existing: T[], incoming: T[], keyOf: (r: T) => string): { 
 const defaultFilters: Filters = {
   salesmen: [],
   statuses: [],
-  probMin: 0,
-  probMax: 1,
+  probabilities: [],
   businessAreas: [],
   brands: [],
   workTypes: [],
@@ -227,7 +225,7 @@ export function filterQuotations(rows: QuotationRow[], f: Filters): QuotationRow
   return rows.filter((r) => {
     if (f.salesmen.length && !f.salesmen.includes(r.salesman)) return false;
     if (f.statuses.length && !f.statuses.includes(r.status)) return false;
-    if (r.probability < f.probMin || r.probability > f.probMax) return false;
+    if (f.probabilities.length && !f.probabilities.includes(r.probability)) return false;
     if (f.businessAreas.length && !f.businessAreas.includes(r.businessArea)) return false;
     if (f.brands.length && !f.brands.includes(r.brand)) return false;
     if (f.workTypes.length && !f.workTypes.includes(r.workType)) return false;

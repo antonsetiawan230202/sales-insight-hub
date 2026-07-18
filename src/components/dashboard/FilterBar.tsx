@@ -16,21 +16,16 @@ function unique<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
 }
 
-const PROB_OPTIONS = [
-  { label: "≥ 25%", value: 0.25 },
-  { label: "≥ 50%", value: 0.5 },
-  { label: "≥ 75%", value: 0.75 },
-  { label: "≥ 90%", value: 0.9 },
-];
+const PROB_VALUES = [0, 0.25, 0.5, 0.75, 0.9, 1];
 
-function probLabel(min: number, max: number): string {
-  if (min === 0 && max === 1) return "All";
-  const pct = Math.round(min * 100);
-  return `≥ ${pct}%`;
+function probLabel(values: number[]): string {
+  if (values.length === 0) return "All";
+  if (values.length === 1) return `${Math.round(values[0] * 100)}%`;
+  return `${values.length} selected`;
 }
 
-function isProbActive(min: number, max: number, value: number): boolean {
-  return min === value && max === 1;
+function probOptionLabel(v: number): string {
+  return `${Math.round(v * 100)}%`;
 }
 
 function MultiSelect({
@@ -124,7 +119,7 @@ export function FilterBar() {
     filters.businessAreas.length +
     filters.brands.length +
     filters.workTypes.length +
-    (filters.probMin > 0 || filters.probMax < 1 ? 1 : 0) +
+    (filters.probabilities.length > 0 ? 1 : 0) +
     (filters.dateFrom || filters.dateTo ? 1 : 0);
 
   return (
@@ -161,45 +156,18 @@ export function FilterBar() {
           onChange={(v) => setFilters({ workTypes: v })}
         />
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 justify-between gap-2 min-w-[10rem]">
-              <span className="flex flex-col items-start leading-tight">
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Probability
-                </span>
-                <span className="text-xs font-medium">
-                  {probLabel(filters.probMin, filters.probMax)}
-                </span>
-              </span>
-              <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64" align="start">
-            <div className="grid grid-cols-1 gap-1.5">
-              <span className="text-xs text-muted-foreground mb-1">Minimum probability</span>
-              {PROB_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.value}
-                  variant={isProbActive(filters.probMin, filters.probMax, opt.value) ? "default" : "outline"}
-                  size="sm"
-                  className="justify-start"
-                  onClick={() => setFilters({ probMin: opt.value, probMax: 1 })}
-                >
-                  {opt.label}
-                </Button>
-              ))}
-              <Button
-                variant={(filters.probMin === 0 && filters.probMax === 1) ? "default" : "outline"}
-                size="sm"
-                className="justify-start mt-1"
-                onClick={() => setFilters({ probMin: 0, probMax: 1 })}
-              >
-                All
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <MultiSelect
+          label="Probability"
+          options={PROB_VALUES.map(probOptionLabel)}
+          value={filters.probabilities.map(probOptionLabel)}
+          onChange={(labels) =>
+            setFilters({
+              probabilities: labels
+                .map((l) => PROB_VALUES.find((v) => probOptionLabel(v) === l) ?? -1)
+                .filter((v) => v >= 0),
+            })
+          }
+        />
 
         <Popover>
           <PopoverTrigger asChild>

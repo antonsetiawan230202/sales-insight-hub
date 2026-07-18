@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useMemo } from "react";
 import type { EiRow } from "@/lib/parse-ei-report";
+import type { QuotationRow } from "@/lib/parse-quotations";
 import { fmtIdrCompact, fmtInt, fmtPct } from "@/lib/format";
 import { SectionCard } from "@/components/reports/shared/SectionCard";
 import { ReportTable } from "@/components/reports/shared/ReportTable";
@@ -16,7 +17,7 @@ function Metric({ label, value, sub }: { label: string; value: string; sub?: str
   );
 }
 
-export function ProfitabilityMarginReport({ ei }: { ei: EiRow[] }) {
+export function ProfitabilityMarginReport({ ei, quotations: _quotations }: { ei: EiRow[]; quotations: QuotationRow[] }) {
   const rows = useMemo(() => idrOnly(ei), [ei]);
 
   const totals = useMemo(() => {

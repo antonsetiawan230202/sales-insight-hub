@@ -14,7 +14,8 @@ type SortKey =
   | "status"
   | "probability"
   | "idr"
-  | "estPoDate";
+  | "estPoDate"
+  | "customerPo";
 
 const cols: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "quotationDate", label: "Date" },
@@ -24,6 +25,7 @@ const cols: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "probability", label: "Prob.", align: "right" },
   { key: "idr", label: "IDR", align: "right" },
   { key: "estPoDate", label: "Est PO" },
+  { key: "customerPo", label: "Customer PO" },
 ];
 
 function fmtDate(d: Date | null): string {
@@ -53,7 +55,7 @@ export function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
     let list = rows;
     if (s) {
       list = list.filter((r) =>
-        [r.customer, r.salesman, r.reference, r.brand, r.workType, r.description, r.remarks]
+        [r.customer, r.salesman, r.reference, r.brand, r.workType, r.description, r.remarks, r.customerPo, r.poNumber]
           .join(" ")
           .toLowerCase()
           .includes(s)
@@ -89,6 +91,7 @@ export function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
       "Est PO",
       "PO Received",
       "PO Number",
+      "Customer PO",
       "Remarks",
     ];
     const lines = [header.join(",")];
@@ -108,6 +111,7 @@ export function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
         r.estPoDate,
         fmtDate(r.poReceivedDate),
         r.poNumber,
+        r.customerPo,
         r.remarks,
       ].map((v) => {
         const s = String(v ?? "");
@@ -193,6 +197,9 @@ export function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
                   {r.idr ? fmtIdr(r.idr) : "—"}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">{r.estPoDate || "—"}</td>
+                <td className="px-3 py-2 whitespace-nowrap" title={r.customerPo}>
+                  {r.customerPo || "—"}
+                </td>
                 <td className="px-3 py-2 max-w-[180px] truncate text-muted-foreground" title={r.reference}>
                   {r.reference}
                 </td>
@@ -200,7 +207,7 @@ export function QuotationsTable({ rows }: { rows: QuotationRow[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={9} className="px-3 py-8 text-center text-muted-foreground">
                   No quotations match the current filters.
                 </td>
               </tr>
