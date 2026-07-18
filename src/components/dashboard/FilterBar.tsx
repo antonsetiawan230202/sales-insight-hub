@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useDashboardStore } from "@/lib/dashboard-store";
 import type { QuotationStatus } from "@/lib/parse-quotations";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -15,6 +14,23 @@ import { Input } from "@/components/ui/input";
 
 function unique<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
+}
+
+const PROB_OPTIONS = [
+  { label: "≥ 25%", value: 0.25 },
+  { label: "≥ 50%", value: 0.5 },
+  { label: "≥ 75%", value: 0.75 },
+  { label: "≥ 90%", value: 0.9 },
+];
+
+function probLabel(min: number, max: number): string {
+  if (min === 0 && max === 1) return "All";
+  const pct = Math.round(min * 100);
+  return `≥ ${pct}%`;
+}
+
+function isProbActive(min: number, max: number, value: number): boolean {
+  return min === value && max === 1;
 }
 
 function MultiSelect({
@@ -153,27 +169,34 @@ export function FilterBar() {
                   Probability
                 </span>
                 <span className="text-xs font-medium">
-                  {Math.round(filters.probMin * 100)}–{Math.round(filters.probMax * 100)}%
+                  {probLabel(filters.probMin, filters.probMax)}
                 </span>
               </span>
               <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-64" align="start">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Min {Math.round(filters.probMin * 100)}%</span>
-                <span>Max {Math.round(filters.probMax * 100)}%</span>
-              </div>
-              <Slider
-                min={0}
-                max={100}
-                step={5}
-                value={[filters.probMin * 100, filters.probMax * 100]}
-                onValueChange={([lo, hi]) =>
-                  setFilters({ probMin: lo / 100, probMax: hi / 100 })
-                }
-              />
+            <div className="grid grid-cols-1 gap-1.5">
+              <span className="text-xs text-muted-foreground mb-1">Minimum probability</span>
+              {PROB_OPTIONS.map((opt) => (
+                <Button
+                  key={opt.value}
+                  variant={isProbActive(filters.probMin, filters.probMax, opt.value) ? "default" : "outline"}
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => setFilters({ probMin: opt.value, probMax: 1 })}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+              <Button
+                variant={(filters.probMin === 0 && filters.probMax === 1) ? "default" : "outline"}
+                size="sm"
+                className="justify-start mt-1"
+                onClick={() => setFilters({ probMin: 0, probMax: 1 })}
+              >
+                All
+              </Button>
             </div>
           </PopoverContent>
         </Popover>

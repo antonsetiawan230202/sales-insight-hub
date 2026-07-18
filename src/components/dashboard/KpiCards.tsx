@@ -63,7 +63,7 @@ export function KpiCards({
   const lost = idrQuotes.filter((q) => q.status === "Lost");
   const sum = (rs: QuotationRow[], key: "idr" | "actualIdr" = "idr") =>
     rs.reduce((a, r) => a + (r[key] || 0), 0);
-  const winRate = won.length + lost.length > 0 ? won.length / (won.length + lost.length) : 0;
+  const winRate = total > 0 ? won.length / total : 0;
   const weightedPipeline = active.reduce((a, r) => a + r.idr * r.probability, 0);
 
   // EI: IDR only
@@ -126,7 +126,7 @@ export function KpiCards({
       <Kpi
         label="Win rate"
         value={fmtPct(winRate, 0)}
-        sub={`${won.length} won / ${won.length + lost.length} closed`}
+        sub={`${won.length} won / ${total} total`}
         icon={TrendingUp}
       />
       <Kpi
