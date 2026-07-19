@@ -151,6 +151,19 @@ export const useDashboardStore = create<StoreState>()(
     }),
     {
       name: "sales-dashboard-v1",
+      version: 1,
+      migrate: (persisted: any, version: number) => {
+        if (version < 1) {
+          const state = persisted?.state ?? persisted ?? {};
+          const filters = { ...(state.filters ?? {}) };
+          if (!Array.isArray(filters.probabilities)) filters.probabilities = [];
+          delete filters.probMin;
+          delete filters.probMax;
+          state.filters = filters;
+          return { ...persisted, state };
+        }
+        return persisted;
+      },
       storage: {
         getItem: (name) => {
           const efs = getElectronFs();
@@ -222,10 +235,11 @@ export async function hydrateFromElectron(): Promise<boolean> {
 export function filterQuotations(rows: QuotationRow[], f: Filters): QuotationRow[] {
   const from = f.dateFrom ? new Date(f.dateFrom).getTime() : null;
   const to = f.dateTo ? new Date(f.dateTo).getTime() + 86400000 : null;
+  const probs = f.probabilities ?? [];
   return rows.filter((r) => {
     if (f.salesmen.length && !f.salesmen.includes(r.salesman)) return false;
     if (f.statuses.length && !f.statuses.includes(r.status)) return false;
-    if (f.probabilities.length && !f.probabilities.includes(r.probability)) return false;
+    if (probs.length && !probs.includes(r.probability)) return false;
     if (f.businessAreas.length && !f.businessAreas.includes(r.businessArea)) return false;
     if (f.brands.length && !f.brands.includes(r.brand)) return false;
     if (f.workTypes.length && !f.workTypes.includes(r.workType)) return false;

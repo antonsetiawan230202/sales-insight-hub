@@ -18,12 +18,6 @@ function unique<T>(arr: T[]): T[] {
 
 const PROB_VALUES = [0, 0.25, 0.5, 0.75, 0.9, 1];
 
-function probLabel(values: number[]): string {
-  if (values.length === 0) return "All";
-  if (values.length === 1) return `${Math.round(values[0] * 100)}%`;
-  return `${values.length} selected`;
-}
-
 function probOptionLabel(v: number): string {
   return `${Math.round(v * 100)}%`;
 }
