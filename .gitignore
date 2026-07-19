@@ -11,8 +11,10 @@ node_modules
 dist
 dist-ssr
 
-# Electron packaged output (large binaries; exceed GitHub's 100MB file limit)
-electron-release
+# Electron packaged output: ignore the large unpacked folder, but keep the
+# distributable .zip (tracked via Git LFS).
+electron-release/*
+!electron-release/*.zip
 .output
 .vinxi
 .tanstack/**
