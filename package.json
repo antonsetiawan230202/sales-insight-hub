@@ -1,5 +1,6 @@
 {
   "name": "tanstack_start_ts",
+  "version": "1.0.0",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -16,7 +17,8 @@
     "electron:package:linux": "npm run build:electron && electron-packager . SalesDashboard --platform=linux --arch=x64 --out=electron-release --overwrite --ignore='node_modules' --ignore='^/src' --ignore='^/public' --ignore='^/dist' --ignore='^/electron-release'",
     "electron:package:win": "npm run build:electron && electron-packager . SalesDashboard --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore='node_modules' --ignore='^/src' --ignore='^/public' --ignore='^/dist' --ignore='^/electron-release' --ignore='^/\\.env' --ignore='^/\\.gitignore' --ignore='^/\\.prettierignore' --ignore='^/\\.prettierrc' --ignore='^/AGENTS\\.md' --ignore='^/bun\\.lock' --ignore='^/bunfig\\.toml' --ignore='^/components\\.json' --ignore='^/eslint\\.config\\.js' --ignore='^/package-lock\\.json' --ignore='^/tsconfig\\.json' --ignore='^/vite\\.config\\.ts' --ignore='^/vite\\.electron\\.config\\.ts' --ignore='^/\\.lovable'",
     "electron:zip:win": "node -e \"const fs=require('fs'),path=require('path');const src='electron-release/SalesDashboard-win32-x64';const out='electron-release/SalesDashboard-win32-x64.zip';const archiver=require('archiver');const output=fs.createWriteStream(out);const archive=archiver('zip',{zlib:{level:9}});output.on('close',()=>console.log('Created '+out+' ('+archive.pointer()+' bytes)'));archive.on('error',e=>{console.error(e);process.exit(1);});archive.pipe(output);archive.directory(src,false);archive.finalize();\"",
-    "electron:release:win": "npm run electron:package:win && npm run electron:zip:win",
+    "electron:copydata:win": "node -e \"const fs=require('fs'),path=require('path');const src='data/raw';const dest='electron-release/SalesDashboard-win32-x64/data/raw';fs.mkdirSync(dest,{recursive:true});for(const f of fs.readdirSync(src)){fs.copyFileSync(path.join(src,f),path.join(dest,f));}console.log('Copied data/raw next to SalesDashboard.exe');\"",
+    "electron:release:win": "npm run electron:package:win && npm run electron:copydata:win && npm run electron:zip:win",
     "electron:package:mac": "npm run build:electron && electron-packager . SalesDashboard --platform=darwin --arch=x64 --out=electron-release --overwrite --ignore='node_modules' --ignore='^/src' --ignore='^/public' --ignore='^/dist' --ignore='^/electron-release'"
   },
   "dependencies": {

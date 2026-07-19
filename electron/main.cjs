@@ -26,7 +26,17 @@ function getBasePath() {
 }
 
 function getDataDir() {
-  return path.join(getBasePath(), "data", "raw");
+  // Prefer a "data/raw" folder sitting next to the executable so users can
+  // drop in / update their own .xlsx files in the same folder as the app.
+  const external = path.join(getBasePath(), "data", "raw");
+  try {
+    if (fs.existsSync(external)) return external;
+  } catch {
+    // ignore and fall through to bundled data
+  }
+  // Fall back to the data bundled inside the packaged app (resources/app),
+  // so the dashboard still loads sample data on a fresh unzip.
+  return path.join(__dirname, "..", "data", "raw");
 }
 
 function getJsonPath() {
